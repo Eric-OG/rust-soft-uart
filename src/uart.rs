@@ -59,7 +59,7 @@ impl UartTransmitter{
         thread::sleep(Duration::from_secs(1/self.baud_rate as u64));
 
         // Emmit data
-        for shift in (0..self.data_size) {
+        for shift in 0..self.data_size {
             let curr_data = (data>>shift)&1;
             println!("{}", curr_data);
             thread::sleep(Duration::from_secs(1/self.baud_rate as u64));
@@ -82,7 +82,7 @@ impl UartTransmitter{
         }
 
         // Emmit stop bits
-        for i in (0..self.stop_bits as u8) {
+        for _i in 0..self.stop_bits as u8 {
             println!("1");
             thread::sleep(Duration::from_secs(1/self.baud_rate as u64));
         }

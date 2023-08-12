@@ -1,4 +1,8 @@
+extern crate embedded_hal as hal;
+extern crate nb;
+
 use std::{thread, time::Duration};
+
 pub enum ParityMode{
     None,
     Odd,
@@ -12,30 +16,27 @@ pub enum StopBitsOption{
     Two
 }
 
-pub struct UartTransmitter{
+pub struct SoftUartTransmitter{
     system_clock: u32, // System clock in Hz
     baud_rate: u32,    // Baud rate in bauds/s
     stop_bits: StopBitsOption,  // Number of stop bits
     parity: ParityMode,  // Parity mode
-    data_size: u8, // Number of bits to be transmitted
 
     num_clocks_to_push: u32,
 }
 
-impl UartTransmitter{
+impl SoftUartTransmitter{
     pub fn new(
         system_clock: u32, // System clock in Hz
         baud_rate: u32,    // Baud rate in bauds/s
         stop_bits: StopBitsOption,  // Number of stop bits
         parity: ParityMode,  // Parity mode
-        data_size: u8, // Number of bits to be transmitted (max 64 bits)
     ) -> Self {
-        UartTransmitter{
+        SoftUartTransmitter{
             system_clock: system_clock,
             baud_rate: baud_rate,
             stop_bits: stop_bits,
             parity: parity,
-            data_size: data_size,
             num_clocks_to_push: system_clock/baud_rate
         }
     }
@@ -51,22 +52,29 @@ impl UartTransmitter{
     pub fn get_clocks_iter(&self) -> u32{
         self.num_clocks_to_push
     }
+}
 
-    pub fn transmit_data(&self, data:u64){
+#[derive(Debug)]
+pub struct UartError;
+
+impl hal::serial::Write<u8> for SoftUartTransmitter {
+    type Error = UartError; 
+
+    fn write(&mut self, word:u8) -> nb::Result<(), Self::Error>{
         // Emmit start bit
         println!("Simulated transmission:");
         println!("0"); // Replace with GPIO
         thread::sleep(Duration::from_secs(1/self.baud_rate as u64));
 
         // Emmit data
-        for shift in 0..self.data_size {
-            let curr_data = (data>>shift)&1;
+        for shift in 0..8 {
+            let curr_data = (word>>shift)&1;
             println!("{}", curr_data);
             thread::sleep(Duration::from_secs(1/self.baud_rate as u64));
         }
 
         // Emmit parity
-        let p = data.count_ones() % 2;
+        let p = word.count_ones() % 2;
         match self.parity {
             ParityMode::Even => {
                 println!("{}", p);
@@ -89,5 +97,12 @@ impl UartTransmitter{
 
         println!("");
         println!("End of transmission");
+        Ok(())
+    }
+
+    fn flush(&mut self) -> nb::Result<(), Self::Error> {
+        // Does nothing, since there is no buffer
+        Ok(())
     }
 }
+    
